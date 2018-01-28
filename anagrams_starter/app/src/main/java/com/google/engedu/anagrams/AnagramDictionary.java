@@ -19,6 +19,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 
@@ -28,30 +32,86 @@ public class AnagramDictionary {
     private static final int DEFAULT_WORD_LENGTH = 3;
     private static final int MAX_WORD_LENGTH = 7;
     private Random random = new Random();
-
+   private HashMap<Integer,ArrayList<String>>sizeToWords =new HashMap<>();
+    private int wordLength;
+    private List<String> wordList;
+    private HashSet<String> wordSet;
+    private HashMap<String,ArrayList<String>> lettersToWord;
     public AnagramDictionary(Reader reader) throws IOException {
+        wordList=new ArrayList<>();
+        wordSet=new HashSet<>();
+        lettersToWord=new HashMap<>();
         BufferedReader in = new BufferedReader(reader);
         String line;
+        wordLength=DEFAULT_WORD_LENGTH;
         while((line = in.readLine()) != null) {
             String word = line.trim();
+            wordList.add(word);
+            String sortedWord=sortLetters(word);
+            wordSet.add(sortedWord);
+            if(lettersToWord.get(sortedWord)==null){
+                lettersToWord.put(sortedWord,new ArrayList<String>());
+            }
+            lettersToWord.get(sortedWord).add(word);
+            if(sizeToWords.get(word.length())==null){
+                sizeToWords.put(word.length(),new ArrayList<String>() );
+            }
+            sizeToWords.get(word.length()).add(word);
         }
+        Collections.sort(wordList);
     }
 
     public boolean isGoodWord(String word, String base) {
-        return true;
+        return wordSet.contains(sortLetters(word))&&(!word.contains(base));
+    }
+
+    private String  sortLetters(String str){
+
+        char[] tmp=str.toCharArray();
+        Arrays.sort(tmp);
+        str=new String(tmp);
+        return str;
     }
 
     public List<String> getAnagrams(String targetWord) {
         ArrayList<String> result = new ArrayList<String>();
+        String sortedWord=sortLetters(targetWord);
+        if(wordSet.contains(sortedWord)){
+            result.addAll(lettersToWord.get(sortedWord));
+        }
+
         return result;
     }
 
     public List<String> getAnagramsWithOneMoreLetter(String word) {
         ArrayList<String> result = new ArrayList<String>();
+        String sword=sortLetters(word);
+        for(String anagramWord:lettersToWord.get(sword)){
+            for(char c:"abcdefghijklmnopqrstuvwxyz".toCharArray()){
+                //upgradeit to sort and binary search
+                String append=anagramWord+c;
+                String prepend=c+anagramWord;
+
+                if(Collections.binarySearch(wordList,append)>=0){
+                    result.add(append);
+                }
+                if(Collections.binarySearch(wordList,prepend)>=0){
+                    result.add(prepend);
+                }
+            }
+
+        }
         return result;
     }
 
     public String pickGoodStarterWord() {
-        return "stop";
+
+        int select;
+        while(!((select=random.nextInt(sizeToWords.get(wordLength).size()))>=0&&(sizeToWords.get(wordLength).size()>=1)&&(getAnagramsWithOneMoreLetter(sizeToWords.get(wordLength).get(select)).size()>MIN_NUM_ANAGRAMS)));
+        if(wordLength<MAX_WORD_LENGTH-1){
+            wordLength++;
+        }
+
+        return sizeToWords.get(wordLength).get(select);
     }
 }
